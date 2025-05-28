@@ -13,18 +13,22 @@ provider "aws" {
 
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
-  version         = "19.17.0"
+  version         = ">= 19.0.0, < 20.0.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.27"
+  cluster_version = var.cluster_version
+  vpc_id          = var.vpc_id
+  subnets         = var.subnets
 
   node_groups = {
     default = {
-      name             = var.node_group_name
-      desired_capacity = var.desired_capacity
-      min_capacity     = var.min_capacity
-      max_capacity     = var.max_capacity
-      instance_type    = var.node_instance_type
+      desired_capacity = 2
+      max_capacity     = 3
+      min_capacity     = 1
+
+      instance_types = ["t3.medium"]
     }
   }
+
+  tags = var.tags
 }

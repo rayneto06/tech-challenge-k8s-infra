@@ -103,6 +103,50 @@ jobs:
 
       # Inicializar, validar e aplicar o Terraform para o diretório infra
 
+      - name: Import any existing ALB/NLB SGs & TGs into state
+        working-directory: terraform/infra
+        env:
+          AWS_REGION: us-east-1
+        run: |
+          # helper to import if the AWS resource actually exists
+          import_if_exists () {
+            local TYPE=$1     # e.g. aws_security_group.alb_sg
+            local LOOKUP=$2   # aws cli filter command
+            local ID
+            ID=$(aws ec2 describe-security-groups \
+                  --region $AWS_REGION \
+                  --filters "${LOOKUP}" \
+                  --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null)
+            if [[ "$ID" != "None" && -n "$ID" ]]; then
+              echo "Importing $TYPE => $ID"
+              terraform init -input=false
+              terraform import -lock=false $TYPE $ID || true
+            fi
+          }
+          # ALB SG
+          import_if_exists aws_security_group.alb_sg 'Name=group-name,Values=tech-challenge-alb-sg'
+          # NLB SG
+          import_if_exists aws_security_group.nlb_sg 'Name=group-name,Values=tech-challenge-nlb-sg'
+
+          # same idea for Target Groups (use aws elbv2 describe-target-groups)
+          TG_ARN=$(aws elbv2 describe-target-groups \
+                    --region $AWS_REGION \
+                    --names tech-challenge-alb-tg \
+                    --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
+          if [[ -n "$TG_ARN" && "$TG_ARN" != "None" ]]; then
+            echo "Importing aws_lb_target_group.alb_target_group => $TG_ARN"
+            terraform import -lock=false aws_lb_target_group.alb_target_group $TG_ARN || true
+          fi
+
+          TG_ARN=$(aws elbv2 describe-target-groups \
+                    --region $AWS_REGION \
+                    --names tech-challenge-nlb-tg \
+                    --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
+          if [[ -n "$TG_ARN" && "$TG_ARN" != "None" ]]; then
+            echo "Importing aws_lb_target_group.nlb_target_group => $TG_ARN"
+            terraform import -lock=false aws_lb_target_group.nlb_target_group $TG_ARN || true
+          fi
+
       - name: Initialize Terraform for Infra
         working-directory: terraform/infra
         run: terraform init

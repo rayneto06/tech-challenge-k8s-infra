@@ -29,7 +29,3 @@ data "aws_subnet" "selected_subnets" {
 data "aws_iam_role" "lab_role" {
   name = "LabRole"
 }
-
-data "aws_security_group" "rds_security_group" {
-  name = "tech-challenge-rds-sg"
-}

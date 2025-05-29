@@ -46,13 +46,6 @@ resource "aws_lb_target_group" "alb_target_group" {
   }
 }
 
-resource "aws_lb_target_group_attachment" "nginx_nodeport_attachment" {
-  count            = length(data.aws_instances.eks_worker_instances.ids)
-  target_group_arn = aws_lb_target_group.alb_target_group.arn
-  target_id        = element(data.aws_instances.eks_worker_instances.ids, count.index)
-  port             = 30080
-}
-
 resource "aws_lb_listener" "alb_listener" {
   load_balancer_arn = aws_lb.alb.arn
   port              = 80
